@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AeroAI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-emoji" id="botEmoji"></span>
+        <div>
+          <h1 id="botName"></h1>
+          <p id="botTagline"></p>
+        </div>
+      </div>
+      <div class="top-buttons">
+        <button type="button" id="keyBtn" class="header-btn">🔑 API key</button>
+        <button type="button" id="newChatBtn" class="header-btn">New chat</button>
+      </div>
+    </header>
+
+    <main id="messages" class="messages" aria-live="polite"></main>
+
+    <div id="starters" class="starters"></div>
+
+    <form id="chatForm" class="input-bar">
+      <textarea id="userInput" rows="1" placeholder="Type your question…" aria-label="Your message"></textarea>
+      <button type="submit" id="sendBtn" aria-label="Send">Send</button>
+    </form>
+  </div>
+
+  <dialog id="keyDialog">
+    <form method="dialog" id="keyForm">
+      <h2>Your Gemini API key</h2>
+      <p class="hint">Paste your key below. It is never stored in the website code.</p>
+      <input type="password" id="keyInput" placeholder="Paste API key here" autocomplete="off" />
+      <label class="remember">
+        <input type="checkbox" id="rememberBox" />
+        Remember on this device
+      </label>
+      <p class="hint" id="keyStatus"></p>
+      <div class="dialog-buttons">
+        <button type="button" id="clearKeyBtn" class="secondary">Remove key</button>
+        <button type="button" id="cancelKeyBtn" class="secondary">Cancel</button>
+        <button type="submit" id="saveKeyBtn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
