@@ -41,7 +41,7 @@ Rules you always follow:
 
   // Which Gemini model to use.
   // If you see a "model not found" message, check this name.
-  model: "gemini-3.5-flash",
+  model: "gemini-3.1-flash-lite",
 
   // The main color of the site (a hex color code)
   themeColor: "#00008B"
