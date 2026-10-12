@@ -16,7 +16,7 @@ const CONFIG = {
   tagline: "Your study partner for aerospace derivations",
 
   // The first message the bot shows when a chat starts
-  welcomeMessage: "Hey! I am AeroAI.",
+  welcomeMessage: "Hey! I am AeroAI. What can I help you solve today?",
 
   // The bot's rules. This tells the AI how to behave.
   // Write it like you are giving instructions to a person.
