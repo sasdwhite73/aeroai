@@ -312,7 +312,38 @@
     }
     // the dialog closes automatically after submit
   });
+  // ----- Download the chat as a text file -----
+  const downloadBtn = document.getElementById("downloadBtn");
 
+  function downloadChat() {
+    if (history.length === 0) {
+      addBubble("error", "There's nothing to download yet. Ask " + CONFIG.botName + " a question first!");
+      return;
+    }
+
+    const now = new Date();
+    let text =
+      CONFIG.botName + " conversation\n" +
+      "Saved: " + now.toLocaleString() + "\n" +
+      "=".repeat(40) + "\n\n";
+
+    history.forEach(function (turn) {
+      const who = turn.role === "user" ? "You" : CONFIG.botName;
+      text += who + ":\n" + turn.parts[0].text + "\n\n" + "-".repeat(40) + "\n\n";
+    });
+
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = CONFIG.botName + "-chat-" + now.toLocaleDateString("en-CA") + ".txt";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  downloadBtn.addEventListener("click", downloadChat);
   // ----- Go! -----
   startChat();
 })();
