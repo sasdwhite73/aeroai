@@ -9,6 +9,8 @@
   --border: #d9deea;
   --error-bg: #fdecec;
   --error-text: #8a1c1c;
+  --warn-bg: #fff6e0;
+  --warn-text: #7a5300;
 }
 
 /* ---------- Colors (dark mode, automatic) ---------- */
@@ -22,10 +24,14 @@
     --border: #2b3142;
     --error-bg: #3a1a1a;
     --error-text: #ffb3b3;
+    --warn-bg: #3a2f14;
+    --warn-text: #ffd98a;
   }
 }
 
 * { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;
@@ -70,6 +76,19 @@ html, body {
   cursor: pointer;
 }
 .header-btn:hover { background: rgba(255, 255, 255, 0.28); }
+
+/* ---------- Knowledge status line ---------- */
+.knowledge-status {
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.knowledge-status.warn {
+  color: var(--warn-text);
+  background: var(--warn-bg);
+}
 
 /* ---------- Messages ---------- */
 .messages {
@@ -116,6 +135,28 @@ html, body {
   border: 1px solid var(--error-text);
   border-bottom-left-radius: 4px;
 }
+
+/* ---------- Sources (under each reply) ---------- */
+.sources {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.sources summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+.source-item { margin-top: 8px; }
+.source-title { font-weight: 600; }
+.source-score { color: var(--muted); font-size: 0.8rem; }
+.source-snippet {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.sources .none { margin: 6px 0 0; color: var(--muted); }
 
 /* ---------- Thinking animation ---------- */
 .thinking { display: flex; gap: 5px; padding: 14px; }
