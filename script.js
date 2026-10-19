@@ -1,349 +1,259 @@
-// =====================================================
-//  This file makes the chatbot work.
-//  You do not need to edit it. Edit config.js instead.
-// =====================================================
+/* ---------- Colors (light mode) ---------- */
+:root {
+  --accent: #00008B; /* replaced automatically from config.js */
+  --bg: #f4f6fb;
+  --panel: #ffffff;
+  --text: #1b1f2a;
+  --muted: #5f6676;
+  --bot-bubble: #ffffff;
+  --border: #d9deea;
+  --error-bg: #fdecec;
+  --error-text: #8a1c1c;
+  --warn-bg: #fff6e0;
+  --warn-text: #7a5300;
+}
 
-(function () {
-  "use strict";
-
-  const KEY_NAME = "aeroai_gemini_api_key";
-
-  // ----- Grab page elements -----
-  const messagesEl = document.getElementById("messages");
-  const startersEl = document.getElementById("starters");
-  const formEl = document.getElementById("chatForm");
-  const inputEl = document.getElementById("userInput");
-  const sendBtn = document.getElementById("sendBtn");
-  const newChatBtn = document.getElementById("newChatBtn");
-  const keyBtn = document.getElementById("keyBtn");
-  const keyDialog = document.getElementById("keyDialog");
-  const keyForm = document.getElementById("keyForm");
-  const keyInput = document.getElementById("keyInput");
-  const rememberBox = document.getElementById("rememberBox");
-  const keyStatus = document.getElementById("keyStatus");
-  const clearKeyBtn = document.getElementById("clearKeyBtn");
-  const cancelKeyBtn = document.getElementById("cancelKeyBtn");
-
-  let history = [];     // the conversation sent to Gemini
-  let isWaiting = false;
-
-  // ----- Apply settings from config.js -----
-  document.title = CONFIG.botName;
-  document.getElementById("botName").textContent = CONFIG.botName;
-  document.getElementById("botEmoji").textContent = CONFIG.botEmoji;
-  document.getElementById("botTagline").textContent = CONFIG.tagline;
-  document.documentElement.style.setProperty("--accent", CONFIG.themeColor);
-  inputEl.placeholder = "Message " + CONFIG.botName + "…";
-
-  // ----- Safe storage helpers (wrapped in try/catch) -----
-  function getKey() {
-    try {
-      const s = sessionStorage.getItem(KEY_NAME);
-      if (s) return s;
-    } catch (e) { /* storage blocked */ }
-    try {
-      const l = localStorage.getItem(KEY_NAME);
-      if (l) return l;
-    } catch (e) { /* storage blocked */ }
-    return "";
+/* ---------- Colors (dark mode, automatic) ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1118;
+    --panel: #171b25;
+    --text: #e8eaf0;
+    --muted: #9aa1b2;
+    --bot-bubble: #1f2431;
+    --border: #2b3142;
+    --error-bg: #3a1a1a;
+    --error-text: #ffb3b3;
+    --warn-bg: #3a2f14;
+    --warn-text: #ffd98a;
   }
+}
 
-  function saveKey(key, remember) {
-    try { sessionStorage.setItem(KEY_NAME, key); } catch (e) { /* ignore */ }
-    try {
-      if (remember) localStorage.setItem(KEY_NAME, key);
-      else localStorage.removeItem(KEY_NAME);
-    } catch (e) { /* ignore */ }
-  }
+* { box-sizing: border-box; }
 
-  function removeKey() {
-    try { sessionStorage.removeItem(KEY_NAME); } catch (e) { /* ignore */ }
-    try { localStorage.removeItem(KEY_NAME); } catch (e) { /* ignore */ }
-  }
+[hidden] { display: none !important; }
 
-  function keyIsRemembered() {
-    try { return !!localStorage.getItem(KEY_NAME); } catch (e) { return false; }
-  }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
 
-  // ----- Safe text formatting: escape HTML first, then add bold/lists -----
-  function escapeHtml(text) {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 820px;
+  margin: 0 auto;
+  background: var(--panel);
+}
 
-  function inlineFormat(text) {
-    return text
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/`([^`]+)`/g, "<code>$1</code>");
-  }
+/* ---------- Top bar ---------- */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--accent);
+  color: #fff;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-emoji { font-size: 2rem; }
+.brand h1 { margin: 0; font-size: 1.2rem; }
+.brand p { margin: 0; font-size: 0.8rem; opacity: 0.85; }
+.top-buttons { display: flex; gap: 8px; }
+.header-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.header-btn:hover { background: rgba(255, 255, 255, 0.28); }
 
-  function formatText(raw) {
-    const lines = escapeHtml(raw).split("\n");
-    let html = "";
-    let listType = null;
+/* ---------- Knowledge status line ---------- */
+.knowledge-status {
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.knowledge-status.warn {
+  color: var(--warn-text);
+  background: var(--warn-bg);
+}
 
-    function closeList() {
-      if (listType) { html += "</" + listType + ">"; listType = null; }
-    }
+/* ---------- Messages ---------- */
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bubble {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.bubble p { margin: 0 0 8px; }
+.bubble p:last-child, .bubble ul:last-child, .bubble ol:last-child { margin-bottom: 0; }
+.bubble ul, .bubble ol { margin: 0 0 8px; padding-left: 22px; }
+.bubble code {
+  background: rgba(127, 127, 127, 0.2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+.bot {
+  align-self: flex-start;
+  background: var(--bot-bubble);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.error {
+  align-self: flex-start;
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-text);
+  border-bottom-left-radius: 4px;
+}
 
-    for (const line of lines) {
-      const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
-      const numbered = line.match(/^\s*\d+[.)]\s+(.*)$/);
-      if (bullet) {
-        if (listType !== "ul") { closeList(); html += "<ul>"; listType = "ul"; }
-        html += "<li>" + inlineFormat(bullet[1]) + "</li>";
-      } else if (numbered) {
-        if (listType !== "ol") { closeList(); html += "<ol>"; listType = "ol"; }
-        html += "<li>" + inlineFormat(numbered[1]) + "</li>";
-      } else {
-        closeList();
-        if (line.trim() !== "") html += "<p>" + inlineFormat(line) + "</p>";
-      }
-    }
-    closeList();
-    return html;
-  }
+/* ---------- Sources (under each reply) ---------- */
+.sources {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.sources summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+.source-item { margin-top: 8px; }
+.source-title { font-weight: 600; }
+.source-score { color: var(--muted); font-size: 0.8rem; }
+.source-snippet {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.sources .none { margin: 6px 0 0; color: var(--muted); }
 
-  // ----- Chat bubbles -----
-  function scrollToBottom() {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
+/* ---------- Thinking animation ---------- */
+.thinking { display: flex; gap: 5px; padding: 14px; }
+.thinking span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: bounce 1.2s infinite ease-in-out;
+}
+.thinking span:nth-child(2) { animation-delay: 0.2s; }
+.thinking span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-6px); opacity: 1; }
+}
 
-  function addBubble(kind, text) {
-    const div = document.createElement("div");
-    div.className = "bubble " + kind;
-    if (kind === "user") div.textContent = text;       // plain text, always safe
-    else div.innerHTML = formatText(text);             // escaped first, then formatted
-    messagesEl.appendChild(div);
-    scrollToBottom();
-    return div;
-  }
+/* ---------- Starter questions ---------- */
+.starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px 8px;
+}
+.starters:empty { display: none; }
+.starter-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+}
+.starter-btn:hover { background: var(--accent); color: #fff; }
 
-  function addThinking() {
-    const div = document.createElement("div");
-    div.className = "bubble bot thinking";
-    div.setAttribute("aria-label", CONFIG.botName + " is thinking");
-    div.innerHTML = "<span></span><span></span><span></span>";
-    messagesEl.appendChild(div);
-    scrollToBottom();
-    return div;
-  }
+/* ---------- Input bar ---------- */
+.input-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.input-bar textarea {
+  flex: 1;
+  resize: none;
+  max-height: 150px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 16px; /* stops phones from zooming in */
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.input-bar textarea:focus { outline: 2px solid var(--accent); }
+#sendBtn, #saveKeyBtn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0 18px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+#sendBtn { min-height: 44px; }
+#sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  // ----- Starter buttons -----
-  function showStarters() {
-    startersEl.innerHTML = "";
-    CONFIG.starterQuestions.forEach(function (q) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "starter-btn";
-      btn.textContent = q;
-      btn.addEventListener("click", function () { sendMessage(q); });
-      startersEl.appendChild(btn);
-    });
-  }
-
-  // ----- Start / restart a chat -----
-  function startChat() {
-    history = [];
-    messagesEl.innerHTML = "";
-    addBubble("bot", CONFIG.welcomeMessage);
-    showStarters();
-    inputEl.value = "";
-    autoResize();
-    inputEl.focus();
-  }
-
-  // ----- Friendly error messages -----
-  function friendlyError(status) {
-    if (status === 400 || status === 403) {
-      return "Your API key doesn't seem to work. Click the “🔑 API key” button and check that you pasted it correctly.";
-    }
-    if (status === 404) {
-      return "The AI model name wasn't found. Open config.js and check the “model” line.";
-    }
-    if (status === 429) {
-      return "Too many requests right now (rate limit). Please wait a minute and try again.";
-    }
-    if (status >= 500) {
-      return "Google's AI servers are having problems. Please try again in a little while.";
-    }
-    return "Something went wrong (error " + status + "). Please try again.";
-  }
-
-  // ----- Talk to Gemini -----
-  async function askGemini(apiKey) {
-    const url =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      encodeURIComponent(CONFIG.model) +
-      ":generateContent";
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: CONFIG.systemInstructions }] },
-        contents: history
-      })
-    });
-
-    if (!response.ok) {
-      const err = new Error("HTTP error");
-      err.status = response.status;
-      throw err;
-    }
-
-    const data = await response.json();
-    const candidate = data.candidates && data.candidates[0];
-    const parts = (candidate && candidate.content && candidate.content.parts) || [];
-
-    const text = parts
-      .filter(function (p) { return !p.thought && typeof p.text === "string"; })
-      .map(function (p) { return p.text; })
-      .join("");
-
-    if (!text) {
-      if (data.promptFeedback && data.promptFeedback.blockReason) {
-        return "I can't answer that one. Try rephrasing your question.";
-      }
-      return "I didn't get an answer back. Please try asking again.";
-    }
-    return text;
-  }
-
-  // ----- Send a message -----
-  async function sendMessage(text) {
-    text = (text || "").trim();
-    if (!text || isWaiting) return;
-
-    const apiKey = getKey();
-    if (!apiKey) {
-      inputEl.value = text;
-      openKeyDialog("Please add your API key first, then press Send again.");
-      return;
-    }
-
-    isWaiting = true;
-    sendBtn.disabled = true;
-    startersEl.innerHTML = "";
-    addBubble("user", text);
-    inputEl.value = "";
-    autoResize();
-    history.push({ role: "user", parts: [{ text: text }] });
-
-    const thinking = addThinking();
-
-    try {
-      const reply = await askGemini(apiKey);
-      thinking.remove();
-      addBubble("bot", reply);
-      history.push({ role: "model", parts: [{ text: reply }] });
-    } catch (err) {
-      thinking.remove();
-      history.pop(); // remove the failed question so you can try again
-      if (err && err.status) {
-        addBubble("error", friendlyError(err.status));
-      } else {
-        addBubble("error", "Can't reach the internet. Check your connection and try again.");
-      }
-    } finally {
-      isWaiting = false;
-      sendBtn.disabled = false;
-      inputEl.focus();
-    }
-  }
-
-  // ----- Text box behavior -----
-  function autoResize() {
-    inputEl.style.height = "auto";
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + "px";
-  }
-
-  inputEl.addEventListener("input", autoResize);
-
-  inputEl.addEventListener("keydown", function (e) {
-    // Enter sends, Shift+Enter makes a new line
-    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
-      e.preventDefault();
-      sendMessage(inputEl.value);
-    }
-  });
-
-  formEl.addEventListener("submit", function (e) {
-    e.preventDefault();
-    sendMessage(inputEl.value);
-  });
-
-  newChatBtn.addEventListener("click", startChat);
-
-  // ----- API key pop-up -----
-  function openKeyDialog(message) {
-    keyInput.value = "";
-    rememberBox.checked = keyIsRemembered();
-    if (message) keyStatus.textContent = message;
-    else keyStatus.textContent = getKey() ? "A key is saved. Paste a new one to replace it." : "No key saved yet.";
-    keyDialog.showModal();
-    keyInput.focus();
-  }
-
-  keyBtn.addEventListener("click", function () { openKeyDialog(); });
-  cancelKeyBtn.addEventListener("click", function () { keyDialog.close(); });
-
-  clearKeyBtn.addEventListener("click", function () {
-    removeKey();
-    keyInput.value = "";
-    rememberBox.checked = false;
-    keyStatus.textContent = "Key removed.";
-  });
-
-  keyForm.addEventListener("submit", function () {
-    const key = keyInput.value.trim();
-    if (key) {
-      saveKey(key, rememberBox.checked);
-    } else if (getKey()) {
-      // No new key pasted: just update the "remember" choice for the saved key
-      saveKey(getKey(), rememberBox.checked);
-    }
-    // the dialog closes automatically after submit
-  });
-  // ----- Download the chat as a text file -----
-  const downloadBtn = document.getElementById("downloadBtn");
-
-  function downloadChat() {
-    if (history.length === 0) {
-      addBubble("error", "There's nothing to download yet. Ask " + CONFIG.botName + " a question first!");
-      return;
-    }
-
-    const now = new Date();
-    let text =
-      CONFIG.botName + " conversation\n" +
-      "Saved: " + now.toLocaleString() + "\n" +
-      "=".repeat(40) + "\n\n";
-
-    history.forEach(function (turn) {
-      const who = turn.role === "user" ? "You" : CONFIG.botName;
-      text += who + ":\n" + turn.parts[0].text + "\n\n" + "-".repeat(40) + "\n\n";
-    });
-
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = CONFIG.botName + "-chat-" + now.toLocaleDateString("en-CA") + ".txt";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  downloadBtn.addEventListener("click", downloadChat);
-  // ----- Go! -----
-  startChat();
-})();
+/* ---------- API key pop-up ---------- */
+dialog {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  width: min(92vw, 420px);
+  padding: 20px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+dialog h2 { margin: 0 0 6px; font-size: 1.15rem; }
+.hint { color: var(--muted); font-size: 0.85rem; margin: 4px 0 10px; }
+#keyInput {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+.remember { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.9rem; }
+.dialog-buttons { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
+.dialog-buttons button { padding: 9px 14px; border-radius: 8px; font-size: 0.9rem; }
+.secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
