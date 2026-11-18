@@ -28,12 +28,6 @@
   const clearKeyBtn = document.getElementById("clearKeyBtn");
   const cancelKeyBtn = document.getElementById("cancelKeyBtn");
   const statusEl = document.getElementById("knowledgeStatus");
-  const downloadBtn = document.getElementById("downloadBtn");
-  const modeSelect = document.getElementById("modeSelect");
-  const aboutBtn = document.getElementById("aboutBtn");
-  const aboutDialog = document.getElementById("aboutDialog");
-  const aboutBody = document.getElementById("aboutBody");
-  const closeAboutBtn = document.getElementById("closeAboutBtn");
 
   let history = [];     // the conversation sent to Gemini (plain questions, no notes)
   let isWaiting = false;
@@ -108,31 +102,14 @@
     }
 
     for (const line of lines) {
-      const heading = line.match(/^\s*#{1,6}\s+(.*)$/);
-      const rule = line.match(/^\s*(-{3,}|\*{3,})\s*$/);
-      const equation = line.match(/^\s*`([^`]+)`\s*$/);
       const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
-      const numbered = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
-
-      if (heading) {
-        closeList();
-        html += "<h4>" + inlineFormat(heading[1]) + "</h4>";
-      } else if (rule) {
-        closeList();
-        html += "<hr>";
-      } else if (equation) {
-        closeList();
-        html += '<div class="equation">' + equation[1] + "</div>";
-      } else if (bullet) {
+      const numbered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+      if (bullet) {
         if (listType !== "ul") { closeList(); html += "<ul>"; listType = "ul"; }
         html += "<li>" + inlineFormat(bullet[1]) + "</li>";
       } else if (numbered) {
-        if (listType !== "ol") {
-          closeList();
-          html += '<ol start="' + numbered[1] + '">';
-          listType = "ol";
-        }
-        html += "<li>" + inlineFormat(numbered[2]) + "</li>";
+        if (listType !== "ol") { closeList(); html += "<ol>"; listType = "ol"; }
+        html += "<li>" + inlineFormat(numbered[1]) + "</li>";
       } else {
         closeList();
         if (line.trim() !== "") html += "<p>" + inlineFormat(line) + "</p>";
@@ -579,11 +556,6 @@
       ":generateContent";
 
     let system = CONFIG.systemInstructions;
-
-    // Add the rules for the chosen study mode (Full derivation or Hint mode)
-    const mode = CONFIG.studyModes[modeSelect.selectedIndex] || CONFIG.studyModes[0];
-    if (mode.rules) system += "\n\nSTUDY MODE (" + mode.name + "): " + mode.rules;
-
     let contents = history;
 
     if (retrieved) {
@@ -730,6 +702,8 @@
   });
 
   // ----- Download the chat as a text file -----
+  const downloadBtn = document.getElementById("downloadBtn");
+
   function downloadChat() {
     if (history.length === 0) {
       addBubble("error", "There's nothing to download yet. Ask " + CONFIG.botName + " a question first!");
@@ -759,28 +733,6 @@
   }
 
   downloadBtn.addEventListener("click", downloadChat);
-
-  // ----- Study mode, disclaimer, and About pop-up -----
-  CONFIG.studyModes.forEach(function (m) {
-    const opt = document.createElement("option");
-    opt.textContent = m.name;
-    modeSelect.appendChild(opt);
-  });
-
-  document.getElementById("disclaimer").textContent = CONFIG.disclaimer;
-  document.getElementById("aboutTitle").textContent = CONFIG.aboutTitle;
-
-  CONFIG.aboutSections.forEach(function (s) {
-    const h = document.createElement("h3");
-    h.textContent = s.heading;
-    const p = document.createElement("p");
-    p.textContent = s.text;
-    aboutBody.appendChild(h);
-    aboutBody.appendChild(p);
-  });
-
-  aboutBtn.addEventListener("click", function () { aboutDialog.showModal(); });
-  closeAboutBtn.addEventListener("click", function () { aboutDialog.close(); });
 
   // ----- Go! -----
   startChat();
