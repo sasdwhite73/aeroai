@@ -257,3 +257,41 @@ dialog h2 { margin: 0 0 6px; font-size: 1.15rem; }
   border: 1px solid var(--border);
   cursor: pointer;
 }
+/* ---------- Study mode bar, disclaimer, About pop-up ---------- */
+.info-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 16px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.info-bar select {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.link-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.disclaimer {
+  margin: 0;
+  padding: 0 16px max(10px, env(safe-area-inset-bottom));
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+#aboutBody h3 { margin: 12px 0 2px; font-size: 0.95rem; }
+#aboutBody p { margin: 0; font-size: 0.9rem; line-height: 1.45; }
+#aboutDialog { max-height: 85vh; overflow-y: auto; }
